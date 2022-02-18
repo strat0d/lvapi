@@ -1,10 +1,9 @@
 package main
 
 import (
-	"fmt"
+	"github.com/strat0d/lvapi/lvxml"
 	"log"
-
-	"lvxml"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"libvirt.org/go/libvirt"
@@ -15,29 +14,54 @@ func main() {
 	router := gin.Default()
 	router.SetTrustedProxies(nil)
 	router.StaticFile("/ep.html", "./static/ep.html")
+	router.GET("/defaultxml", func(c *gin.Context) {
+		var dom lvxml.Domain
+		lvxml.GetDefaultDomainXML(&dom)
+		c.XML(http.StatusOK, dom)
+	})
+	router.GET("/domains", func(c *gin.Context) {
+		lvcf := libvirt.ConnectFlags(libvirt.CONNECT_RO)
+		lvconn, err := libvirt.NewConnectWithAuthDefault("qemu+ssh://strat@192.168.101.2/system", lvcf)
+		if err != nil {
+			log.Fatalf("Error connecting to libvirt: %v", err)
+		}
+		defer lvconn.Close()
 
-	lvcf := libvirt.ConnectFlags(libvirt.CONNECT_RO)
-	lvconn, err := libvirt.NewConnectWithAuthDefault("qemu+ssh://strat@192.168.101.2/system", lvcf)
-	if err != nil {
-		log.Fatalf("Error connecting to libvirt: %v", err)
-	}
-	defer lvconn.Close()
-
-	domains, err := lvconn.ListAllDomains(libvirt.CONNECT_LIST_DOMAINS_ACTIVE | libvirt.CONNECT_LIST_DOMAINS_INACTIVE)
-	if err != nil {
-		log.Fatalf("Error getting domains: %v", err)
-	}
-
-	for _, dom := range domains {
-		name, err := dom.GetName()
-		status, err := dom.GetInfo()
-		if err == nil {
-			fmt.Printf("%s - %d\n", name, status.State)
+		domains, err := lvconn.ListAllDomains(libvirt.CONNECT_LIST_DOMAINS_ACTIVE | libvirt.CONNECT_LIST_DOMAINS_INACTIVE)
+		if err != nil {
+			log.Fatalf("Error getting domains: %v", err)
 		}
 
-	}
-	dom := lvxml.GetDefaultDomainXML()
-	fmt.Printf("%v", dom)
+		type domS struct {
+			DomainName string
+			DomainStatus int
+			DomainID uint
+		}
+		doms := []domS{}
+		for _, dom := range domains {
+			name, err := dom.GetName()
+			if err != nil {
+				log.Fatalf("err: %v", err)
+			}
+			_, status, err := dom.GetState()
+			if err != nil {
+				log.Fatalf("err: %v", err)
+			}
+			var id uint = 0
+			if status > 0 {
+				var err error
+				id, err = dom.GetID()
+				if err != nil {
+					log.Fatalf("err: %v", err)
+				}
+			} else {
+				id = 0
+			}
+			d := domS{DomainName: name, DomainStatus: status, DomainID: id}
+			doms = append(doms, d)
+		}
+		c.IndentedJSON(http.StatusOK, doms)
+	})
 
 	router.Run("0.0.0.0:8080")
 }
