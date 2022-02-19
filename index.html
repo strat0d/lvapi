@@ -23,8 +23,8 @@
                 $.get(au+"domains/"+host, function(data, status){
                     html="<table><tr><th>#</th><th>Name</th><th>State(Reason)</th><th>ID</th></tr>"                    
                     $.each(data, function(key, value){
-                        console.log(key + ": " + value.DomainName)
-                        html += "<tr><td>" + key + td + value.DomainName + td + value.DomainState +"("+ value.DomainStateReason +")"+ td + value.DomainID + "</td></tr>"
+                        console.log(key + ": " + value.Name)
+                        html += "<tr><td>" + key + td + value.Name + td + value.State.State +"("+ value.StateReason +")"+ td + value.ID + "</td></tr>"
                     })
                     html += "</table>"
                     Result(html)

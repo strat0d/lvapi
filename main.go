@@ -1,16 +1,18 @@
 package main
 
 import (
-	//"github.com/strat0d/lvapi/lvxml"
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 	"libvirt.org/go/libvirt"
 	"libvirt.org/go/libvirtxml"
 
 	"github.com/strat0d/lvapi/lvstr"
+	//"lvapi/lvstr"
 )
 
 func lvapiConnRo(host string) (*libvirt.Connect, error) {
@@ -53,12 +55,24 @@ func getDomains(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"error": fmt.Sprintf("Error getting domains: %v", err)})
 	}
 
+	var wg sync.WaitGroup
+
 	doms := []lvstr.Domain{}
+	wg.Add(len(domains))
 	for _, dom := range domains {
 		d := lvstr.Domain{}
-		lvstr.GetDomain(&dom, &d)
-		doms = append(doms, d)
+		go func(domGr libvirt.Domain) {
+			defer wg.Done()
+			lvstr.GetDomain(&domGr, &d)
+			doms = append(doms, d)
+		}(dom)
 	}
+	wg.Wait()
+
+	//always return domaisn in alphabetical order by Name
+	sort.Slice(doms, func(i, j int) bool {
+		return doms[i].Name < doms[j].Name
+	})
 	c.IndentedJSON(http.StatusOK, doms)
 }
 
