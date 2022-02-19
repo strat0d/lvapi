@@ -51,3 +51,5 @@ gopkg.in/yaml.v2 v2.2.8 h1:obN1ZagJSUGI0Ek/LBmuj4SNLPfIny3KsKFopxRdj10=
 gopkg.in/yaml.v2 v2.2.8/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 libvirt.org/go/libvirt v1.7010.0 h1:DlllozmFIhjuF5DL9Z19UOcKfgFp3T0RjWtxdiBjPpM=
 libvirt.org/go/libvirt v1.7010.0/go.mod h1:1WiFE8EjZfq+FCVog+rvr1yatKbKZ9FaFMZgEqxEJqQ=
+libvirt.org/go/libvirtxml v1.7010.0 h1:UCrJRyY7HX13N2dS/6TOIdCAoJlNrpkSd+DjYJZpb7U=
+libvirt.org/go/libvirtxml v1.7010.0/go.mod h1:7Oq2BLDstLr/XtoQD8Fr3mfDNrzlI3utYKySXF2xkng=

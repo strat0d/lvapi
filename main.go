@@ -1,67 +1,147 @@
 package main
 
 import (
-	"github.com/strat0d/lvapi/lvxml"
-	"log"
+	//"github.com/strat0d/lvapi/lvxml"
+	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"libvirt.org/go/libvirt"
+	"libvirt.org/go/libvirtxml"
+
+	"github.com/strat0d/lvapi/lvstr"
 )
+
+func lvapiConnRo(host string) (*libvirt.Connect, error) {
+	h := defaultHost(host)
+	conn, err := libvirt.NewConnectWithAuthDefault(h.URI(), libvirt.ConnectFlags(libvirt.CONNECT_RO))
+	return conn, err
+}
+
+type Host struct {
+	driver string
+	user   string
+	host   string
+	level  string
+}
+
+func (h Host) URI() string {
+	return fmt.Sprintf("%s://%s@%s/%s", h.driver, h.user, h.host, h.level)
+}
+
+func defaultHost(host string) *Host {
+	newHost := Host{driver: "qemu+ssh", user: "root", level: "system"}
+	newHost.host = host
+	return &newHost
+}
+
+func getDefaultXML() *libvirtxml.Domain {
+	dom := &libvirtxml.Domain{Type: "kvm", Name: "TestName"}
+	return dom
+}
+
+func getDomains(c *gin.Context) {
+	lvconn, err := lvapiConnRo(c.Param("host"))
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"error": fmt.Sprintf("%v", err)})
+	}
+	defer lvconn.Close()
+
+	domains, err := lvconn.ListAllDomains(libvirt.CONNECT_LIST_DOMAINS_ACTIVE | libvirt.CONNECT_LIST_DOMAINS_INACTIVE)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"error": fmt.Sprintf("Error getting domains: %v", err)})
+	}
+
+	doms := []lvstr.Domain{}
+	for _, dom := range domains {
+		doms = append(doms, lvstr.GetDomain(&dom))
+	}
+	c.IndentedJSON(http.StatusOK, doms)
+}
+
+func getDomain(c *gin.Context) {
+	h := c.Param("host")
+	m := c.Param("method")
+	v := c.Param("val")
+
+	lvconn, err := lvapiConnRo(h)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"error": fmt.Sprintf("getDomain(): %v", err)})
+	}
+	defer lvconn.Close()
+
+	var d = lvstr.Domain{}
+
+	switch m {
+	case "id":
+		id, err := strconv.ParseUint(v, 10, 32)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"error": fmt.Sprintf("getDomain(): \"%v\" invalid ID. %v", v, err)})
+			return
+		}
+		dom, err := lvconn.LookupDomainById(uint32(id))
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"error": fmt.Sprintf("getDomain(): \"%v\"", err)})
+			return
+		}
+		d = lvstr.GetDomain(&dom)
+	case "name":
+		//
+		dom, err := lvconn.LookupDomainByName(v)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"error": fmt.Sprintf("getDomain(): \"%v\"", err)})
+			return
+		}
+		d = lvstr.GetDomain(&dom)
+	case "uuid":
+		//
+		dom, err := lvconn.LookupDomainByUUIDString(v)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"error": fmt.Sprintf("getDomain(): \"%v\"", err)})
+			return
+		}
+		d = lvstr.GetDomain(&dom)
+	default:
+		c.JSON(http.StatusOK, gin.H{"error": fmt.Sprintf("getDomain(): \"%v\" invalid method", m)})
+		return
+	}
+	c.IndentedJSON(http.StatusOK, d)
+}
 
 func main() {
 	//GIN
 	router := gin.Default()
-	router.SetTrustedProxies(nil)
-	router.StaticFile("/ep.html", "./static/ep.html")
-	router.GET("/defaultxml", func(c *gin.Context) {
-		var dom lvxml.Domain
-		lvxml.GetDefaultDomainXML(&dom)
-		c.XML(http.StatusOK, dom)
-	})
-	router.GET("/domains", func(c *gin.Context) {
-		lvcf := libvirt.ConnectFlags(libvirt.CONNECT_RO)
-		lvconn, err := libvirt.NewConnectWithAuthDefault("qemu+ssh://strat@192.168.101.2/system", lvcf)
-		if err != nil {
-			log.Fatalf("Error connecting to libvirt: %v", err)
-		}
-		defer lvconn.Close()
+	//router.SetTrustedProxies(nil)
 
-		domains, err := lvconn.ListAllDomains(libvirt.CONNECT_LIST_DOMAINS_ACTIVE | libvirt.CONNECT_LIST_DOMAINS_INACTIVE)
-		if err != nil {
-			log.Fatalf("Error getting domains: %v", err)
-		}
+	ag_domains := router.Group("/api/v0/domains")
+	{
+		//get all domains on a host
+		ag_domains.GET("/:host", func(c *gin.Context) {
+			c.Header("Access-Control-Allow-Origin", "*")
+			getDomains(c)
+		})
+		//get domain :val by :<method>(id, name, uuid) on :host
+		ag_domains.GET("/:host/:method/:val", func(c *gin.Context) {
+			c.Header("Access-Control-Allow-Origin", "*")
+			getDomain(c)
+		})
 
-		type domS struct {
-			DomainName string
-			DomainStatus int
-			DomainID uint
-		}
-		doms := []domS{}
-		for _, dom := range domains {
-			name, err := dom.GetName()
-			if err != nil {
-				log.Fatalf("err: %v", err)
-			}
-			_, status, err := dom.GetState()
-			if err != nil {
-				log.Fatalf("err: %v", err)
-			}
-			var id uint = 0
-			if status > 0 {
-				var err error
-				id, err = dom.GetID()
-				if err != nil {
-					log.Fatalf("err: %v", err)
-				}
-			} else {
-				id = 0
-			}
-			d := domS{DomainName: name, DomainStatus: status, DomainID: id}
-			doms = append(doms, d)
-		}
-		c.IndentedJSON(http.StatusOK, doms)
-	})
+		//POST
+		ag_domains.POST("/:host/", func(c *gin.Context) {
+			c.Header("Access-Control-Allow-Origin", "*")
+			//
+		})
+	}
+
+	ag_misc := router.Group("/api/v0/misc")
+	{
+		ag_misc.GET("/defaultxml", func(c *gin.Context) {
+			c.Header("Access-Control-Allow-Origin", "*")
+			dom := getDefaultXML()
+			c.XML(http.StatusOK, dom)
+		})
+	}
 
 	router.Run("0.0.0.0:8080")
 }
