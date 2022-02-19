@@ -25,6 +25,8 @@ github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421/go.mod h1:6dJ
 github.com/modern-go/reflect2 v0.0.0-20180701023420-4b7aa43c6742 h1:Esafd1046DLDQ0W1YjYsBW+p8U2u7vzgW2SQVmlNazg=
 github.com/modern-go/reflect2 v0.0.0-20180701023420-4b7aa43c6742/go.mod h1:bx2lNnkwVCuqBIxFjflWJWanXIb3RllmbCylyMrvgv0=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
+github.com/strat0d/lvapi/lvstr v0.0.0-20220219195557-e8b5c80eec3d h1:hoIpGTujDcpyQrDNiUBvDp1cYLWzfe9NhlL3RqSS0us=
+github.com/strat0d/lvapi/lvstr v0.0.0-20220219195557-e8b5c80eec3d/go.mod h1:J0jnpdlZKG0JQy6caY9qAKRTu/+GcDYo6uH4nNJ9Uno=
 github.com/strat0d/lvapi/lvxml v0.0.0-20220218210421-64a5e471499f h1:mPP+d/cFEfJ8wPCDXMUQ4CVOjrpFdYlzNzc23tUAt/c=
 github.com/strat0d/lvapi/lvxml v0.0.0-20220218210421-64a5e471499f/go.mod h1:3m6wAZKrjWKvicPS2SC7AewQ0EHOGKlDfrqu4alWNU4=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

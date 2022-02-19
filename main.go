@@ -55,7 +55,9 @@ func getDomains(c *gin.Context) {
 
 	doms := []lvstr.Domain{}
 	for _, dom := range domains {
-		doms = append(doms, lvstr.GetDomain(&dom))
+		d := lvstr.Domain{}
+		lvstr.GetDomain(&dom, &d)
+		doms = append(doms, d)
 	}
 	c.IndentedJSON(http.StatusOK, doms)
 }
@@ -85,7 +87,7 @@ func getDomain(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"error": fmt.Sprintf("getDomain(): \"%v\"", err)})
 			return
 		}
-		d = lvstr.GetDomain(&dom)
+		lvstr.GetDomain(dom, &d)
 	case "name":
 		//
 		dom, err := lvconn.LookupDomainByName(v)
@@ -93,7 +95,7 @@ func getDomain(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"error": fmt.Sprintf("getDomain(): \"%v\"", err)})
 			return
 		}
-		d = lvstr.GetDomain(&dom)
+		lvstr.GetDomain(dom, &d)
 	case "uuid":
 		//
 		dom, err := lvconn.LookupDomainByUUIDString(v)
@@ -101,7 +103,7 @@ func getDomain(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"error": fmt.Sprintf("getDomain(): \"%v\"", err)})
 			return
 		}
-		d = lvstr.GetDomain(&dom)
+		lvstr.GetDomain(dom, &d)
 	default:
 		c.JSON(http.StatusOK, gin.H{"error": fmt.Sprintf("getDomain(): \"%v\" invalid method", m)})
 		return
