@@ -103,7 +103,7 @@ func (s *vcpuState) String() string {
 	}
 }
 
-func GetDomain(l *libvirt.Domain) *Domain {
+func GetDomain(l *libvirt.Domain) Domain {
 	var d = Domain{}
 
 	d.Autostart, _ = l.GetAutostart()
@@ -119,7 +119,7 @@ func GetDomain(l *libvirt.Domain) *Domain {
 	d.State = domainState{State: int(s)}
 	d.StateReason = r
 
-	return &d
+	return d
 }
 
 /// GetAutostart() (bool, error)
