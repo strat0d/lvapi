@@ -13,7 +13,7 @@ import (
 	"libvirt.org/go/libvirtxml"
 )
 
-func GetDefaultXML() *libvirtxml.Domain {
+func DefaultXML() *libvirtxml.Domain {
 	dom := &libvirtxml.Domain{Type: "kvm", Name: "TestName"}
 	return dom
 }
@@ -46,7 +46,7 @@ type DomainsResult struct {
 	Err     error
 }
 
-func GetDomains(c *gin.Context) DomainsResult {
+func Domains(c *gin.Context) DomainsResult {
 	lvconn, err := lvapiConnRo(c.Param("host"))
 	if err != nil {
 		return DomainsResult{Domains: nil, Err: err}
@@ -88,7 +88,7 @@ type DomainResult struct {
 	Err    error
 }
 
-func GetDomain(c *gin.Context) DomainResult {
+func Domain(c *gin.Context) DomainResult {
 	h := c.Param("host")
 	m := c.Param("method")
 	v := c.Param("val")

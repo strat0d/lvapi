@@ -7,6 +7,4 @@ require (
 	github.com/strat0d/lvapi/lvget v0.0.0-00010101000000-000000000000
 )
 
-replace github.com/strat0d/lvapi/lvstr => ./lvstr
-
 replace github.com/strat0d/lvapi/lvget => ./lvget

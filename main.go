@@ -20,7 +20,7 @@ func main() {
 			c.Header("Access-Control-Allow-Origin", "*")
 			cc := c.Copy()
 			go func(c *gin.Context) {
-				res <- lvget.GetDomains(cc)
+				res <- lvget.Domains(cc)
 				close(res)
 			}(cc)
 			r := <-res
@@ -36,7 +36,7 @@ func main() {
 			c.Header("Access-Control-Allow-Origin", "*")
 			cc := c.Copy()
 			go func(c *gin.Context) {
-				res <- lvget.GetDomain(c)
+				res <- lvget.Domain(c)
 				close(res)
 			}(cc)
 			r := <-res
@@ -60,38 +60,10 @@ func main() {
 	{
 		ag_misc.GET("/defaultxml", func(c *gin.Context) {
 			c.Header("Access-Control-Allow-Origin", "*")
-			dom := lvget.GetDefaultXML()
+			dom := lvget.DefaultXML()
 			c.XML(http.StatusOK, dom)
 		})
 	}
 
 	router.Run("0.0.0.0:8080")
 }
-
-/* func getVersion(l *libvirt.Libvirt) string {
-	v, err := l.ConnectGetLibVersion()
-	if err != nil {
-		log.Fatalf("Failed to retrieve libvirt version : %v", err)
-	}
-	//return string(v)
-	return fmt.Sprint(v)
-}
-
-func getDomains(l *libvirt.Libvirt, f string) []libvirt.Domain {
-	//domains, err := l.Domains()
-	var flags libvirt.ConnectListAllDomainsFlags
-	if f == "active" {
-		flags = libvirt.ConnectListDomainsActive
-	} else if f == "inactive" {
-		flags = libvirt.ConnectListDomainsInactive
-	} else {
-		flags = libvirt.ConnectListDomainsActive | libvirt.ConnectListDomainsInactive
-	}
-
-	domains, _, err := l.ConnectListAllDomains(1, flags)
-	if err != nil {
-		log.Fatalf("failed to retrieve domains: %v", err)
-	}
-
-	return domains
-} */
