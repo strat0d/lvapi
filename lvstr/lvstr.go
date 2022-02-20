@@ -1,6 +1,6 @@
 package lvstr
 
-// converts libvirt objects to more usable
+// converts libvirt objects to more easily usable structs for JSON
 import (
 	"sync"
 
@@ -53,6 +53,7 @@ type Domain struct {
 	UUID        string
 	XMLDesc     string
 	VcpuInfo    []domainVcpuInfo
+	Info        domainInfo
 }
 
 type domainState struct {
@@ -86,7 +87,7 @@ func (s *domainState) String() string {
 func GetDomain(l *libvirt.Domain, d *Domain) {
 	var wg sync.WaitGroup
 
-	wg.Add(11)
+	wg.Add(12)
 	//1
 	go func() {
 		defer wg.Done()
@@ -145,6 +146,11 @@ func GetDomain(l *libvirt.Domain, d *Domain) {
 		defer wg.Done()
 		getVcpuInfo(l, d)
 	}()
+	//12
+	go func() {
+		defer wg.Done()
+		getDomainInfo(l, d)
+	}()
 
 	wg.Wait()
 }
@@ -187,4 +193,23 @@ func getVcpuInfo(l *libvirt.Domain, d *Domain) {
 		v.State.StateStr = v.State.String()
 		d.VcpuInfo = append(d.VcpuInfo, v)
 	}
+}
+
+type domainInfo struct {
+	State     domainState
+	MaxMem    uint64
+	Memory    uint64
+	NrVirtCpu uint
+	CpuTime   uint64
+}
+
+func getDomainInfo(l *libvirt.Domain, d *Domain) {
+	i, _ := l.GetInfo()
+	d.Info.MaxMem = i.MaxMem
+	d.Info.Memory = i.Memory
+	d.Info.NrVirtCpu = i.NrVirtCpu
+	d.Info.CpuTime = i.CpuTime
+
+	d.Info.State.State = int(i.State)
+	d.Info.State.StateStr = d.State.String()
 }
