@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/gin-gonic/gin"
 	"github.com/strat0d/lvapi/lvstr"
 	"libvirt.org/go/libvirt"
 	"libvirt.org/go/libvirtxml"
@@ -24,9 +23,13 @@ func defaultHost(host string) *Host {
 	return &newHost
 }
 
-func lvapiConnRo(host string) (*libvirt.Connect, error) {
+func lvapiConn(host string, write bool) (*libvirt.Connect, error) {
 	h := defaultHost(host)
-	conn, err := libvirt.NewConnectWithAuthDefault(h.URI(), libvirt.ConnectFlags(libvirt.CONNECT_RO))
+	var f libvirt.ConnectFlags
+	if !write {
+		f = libvirt.CONNECT_RO
+	}
+	conn, err := libvirt.NewConnectWithAuthDefault(h.URI(), libvirt.ConnectFlags(f))
 	return conn, err
 }
 
@@ -43,21 +46,19 @@ func (h Host) URI() string {
 
 type DomainsResult struct {
 	Domains []lvstr.Domain
-	Err     error
+	Error   error
 }
 
-func Domains(c *gin.Context) DomainsResult {
-	lvconn, err := lvapiConnRo(c.Param("host"))
+func Domains(h string) DomainsResult {
+	lvconn, err := lvapiConn(h, false)
 	if err != nil {
-		return DomainsResult{Domains: nil, Err: err}
-		//c.JSON(http.StatusOK, gin.H{"error": fmt.Sprintf("%v", err)})
+		return DomainsResult{Domains: nil, Error: err}
 	}
 	defer lvconn.Close()
 
 	domains, err := lvconn.ListAllDomains(libvirt.CONNECT_LIST_DOMAINS_ACTIVE | libvirt.CONNECT_LIST_DOMAINS_INACTIVE)
 	if err != nil {
-		return DomainsResult{Domains: nil, Err: err}
-		//c.JSON(http.StatusOK, gin.H{"error": fmt.Sprintf("Error getting domains: %v", err)})
+		return DomainsResult{Domains: nil, Error: err}
 	}
 
 	var wg sync.WaitGroup
@@ -79,62 +80,85 @@ func Domains(c *gin.Context) DomainsResult {
 		return doms[i].Name < doms[j].Name
 	})
 
-	//c.IndentedJSON(http.StatusOK, doms)
-	return DomainsResult{Domains: doms, Err: nil}
+	return DomainsResult{Domains: doms, Error: nil}
 }
 
 type DomainResult struct {
 	Domain lvstr.Domain
-	Err    error
+	Error  error
 }
 
-func Domain(c *gin.Context) DomainResult {
-	h := c.Param("host")
-	m := c.Param("method")
-	v := c.Param("val")
+type LvDomainResult struct {
+	Domain *libvirt.Domain
+	Error  error
+}
 
-	lvconn, err := lvapiConnRo(h)
+func lvDomainById(c *libvirt.Connect, id uint32) (*libvirt.Domain, error) {
+	d, err := c.LookupDomainById(id)
 	if err != nil {
-		//c.JSON(http.StatusOK, gin.H{"error": fmt.Sprintf("getDomain(): %v", err)})
-		return DomainResult{Err: err}
+		return &libvirt.Domain{}, err
 	}
+	return d, nil
+}
+func lvDomainByName(c *libvirt.Connect, name string) (*libvirt.Domain, error) {
+	d, err := c.LookupDomainByName(name)
+	if err != nil {
+		return &libvirt.Domain{}, err
+	}
+	return d, nil
+}
+
+func lvDomainByUUID(c *libvirt.Connect, uuid string) (*libvirt.Domain, error) {
+	d, err := c.LookupDomainByUUIDString(uuid)
+	if err != nil {
+		return &libvirt.Domain{}, err
+	}
+	return d, nil
+}
+
+func LvDomain(h, by, v string, w bool) LvDomainResult {
+	lvconn, err := lvapiConn(h, w)
+	if err != nil {
+		return LvDomainResult{nil, err}
+	}
+
 	defer lvconn.Close()
-
-	var d = lvstr.Domain{}
-
-	switch m {
+	switch by {
 	case "id":
 		id, err := strconv.ParseUint(v, 10, 32)
 		if err != nil {
-			//c.JSON(http.StatusOK, gin.H{"error": fmt.Sprintf("getDomain(): \"%v\" invalid ID. %v", v, err)})
-			return DomainResult{Err: err}
+			return LvDomainResult{nil, err}
 		}
-		dom, err := lvconn.LookupDomainById(uint32(id))
+		d, err := lvDomainById(lvconn, uint32(id))
 		if err != nil {
-			//c.JSON(http.StatusOK, gin.H{"error": fmt.Sprintf("getDomain(): \"%v\"", err)})
-			return DomainResult{Err: err}
+			return LvDomainResult{nil, err}
 		}
-		lvstr.GetDomain(dom, &d)
+		return LvDomainResult{d, nil}
+
 	case "name":
-		//
-		dom, err := lvconn.LookupDomainByName(v)
+		d, err := lvDomainByName(lvconn, v)
 		if err != nil {
-			//c.JSON(http.StatusOK, gin.H{"error": fmt.Sprintf("getDomain(): \"%v\"", err)})
-			return DomainResult{Err: err}
+			return LvDomainResult{nil, err}
 		}
-		lvstr.GetDomain(dom, &d)
+		return LvDomainResult{d, nil}
 	case "uuid":
-		//
-		dom, err := lvconn.LookupDomainByUUIDString(v)
+		d, err := lvDomainByUUID(lvconn, v)
 		if err != nil {
-			//c.JSON(http.StatusOK, gin.H{"error": fmt.Sprintf("getDomain(): \"%v\"", err)})
-			return DomainResult{Err: err}
+			return LvDomainResult{nil, err}
 		}
-		lvstr.GetDomain(dom, &d)
-	default:
-		//c.JSON(http.StatusOK, gin.H{"error": fmt.Sprintf("getDomain(): \"%v\" invalid method", m)})
-		return DomainResult{Err: errors.New("invalid method")}
+		return LvDomainResult{d, nil}
 	}
-	//c.IndentedJSON(http.StatusOK, d)
+	return LvDomainResult{nil, errors.New("invalid method")}
+}
+
+func Domain(h, by, v string) DomainResult {
+	ld := LvDomain(h, by, v, false)
+	if ld.Error != nil {
+		return DomainResult{Error: ld.Error}
+	}
+
+	var d = lvstr.Domain{}
+	lvstr.GetDomain(ld.Domain, &d)
+
 	return DomainResult{d, nil}
 }

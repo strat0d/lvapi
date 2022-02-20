@@ -16,32 +16,34 @@ func main() {
 	{
 		//get all domains on a host
 		ag_domains.GET("/:host", func(c *gin.Context) {
-			res := make(chan lvget.DomainsResult)
 			c.Header("Access-Control-Allow-Origin", "*")
-			cc := c.Copy()
-			go func(c *gin.Context) {
-				res <- lvget.Domains(cc)
+
+			res := make(chan lvget.DomainsResult)
+			h := c.Param("host")
+			go func() {
+				res <- lvget.Domains(h)
 				close(res)
-			}(cc)
+			}()
 			r := <-res
-			if r.Err != nil {
-				c.IndentedJSON(http.StatusOK, gin.H{"error": r.Err.Error})
+			if r.Error != nil {
+				c.IndentedJSON(http.StatusOK, gin.H{"error": r.Error.Error})
 			} else {
 				c.IndentedJSON(http.StatusOK, r.Domains)
 			}
 		})
-		//get domain :val by :<method>(id, name, uuid) on :host
-		ag_domains.GET("/:host/:method/:val", func(c *gin.Context) {
-			res := make(chan lvget.DomainResult)
+		//get domain :val :by(id, name, uuid) on :host
+		ag_domains.GET("/:host/:by/:val", func(c *gin.Context) {
 			c.Header("Access-Control-Allow-Origin", "*")
-			cc := c.Copy()
-			go func(c *gin.Context) {
-				res <- lvget.Domain(c)
+
+			res := make(chan lvget.DomainResult)
+			h, by, v := c.Param("host"), c.Param("by"), c.Param("val")
+			go func() {
+				res <- lvget.Domain(h, by, v)
 				close(res)
-			}(cc)
+			}()
 			r := <-res
-			if r.Err != nil {
-				c.IndentedJSON(http.StatusOK, gin.H{"error": r.Err.Error()})
+			if r.Error != nil {
+				c.IndentedJSON(http.StatusOK, gin.H{"error": r.Error.Error()})
 			} else {
 				c.IndentedJSON(http.StatusOK, r.Domain)
 			}
@@ -49,10 +51,23 @@ func main() {
 		})
 
 		//POST
-		//run libvirt/virsh :action on guest :val found by :method<id,name,uuid> on :host
-		ag_domains.POST("/:host/:method/:val/:action", func(c *gin.Context) {
+		//run libvirt/virsh :action on guest :val found :by<id,name,uuid> on :host
+		ag_domains.POST("/:host/:by/:val/:action", func(c *gin.Context) {
 			c.Header("Access-Control-Allow-Origin", "*")
-			//
+
+			dom := make(chan lvget.LvDomainResult)
+			h, by, v := c.Param("host"), c.Param("by"), c.Param("val")
+			go func() {
+				dom <- lvget.LvDomain(h, by, v, true)
+				close(dom)
+			}()
+			d := <-dom
+			if d.Error != nil {
+				c.IndentedJSON(http.StatusOK, gin.H{"error": d.Error.Error()})
+			} else {
+				c.IndentedJSON(http.StatusOK, d.Domain.Destroy())
+			}
+
 		})
 	}
 
