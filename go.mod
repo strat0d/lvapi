@@ -4,9 +4,9 @@ go 1.13
 
 require (
 	github.com/gin-gonic/gin v1.7.7
-	github.com/strat0d/lvapi/lvstr v0.0.0-20220219201353-4df22a246d41
-	libvirt.org/go/libvirt v1.7010.0
-	libvirt.org/go/libvirtxml v1.7010.0
+	github.com/strat0d/lvapi/lvget v0.0.0-00010101000000-000000000000
 )
 
 replace github.com/strat0d/lvapi/lvstr => ./lvstr
+
+replace github.com/strat0d/lvapi/lvget => ./lvget
