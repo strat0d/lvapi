@@ -2,8 +2,6 @@ package lvstr
 
 // converts libvirt objects to more easily usable structs for JSON
 import (
-	"sync"
-
 	"libvirt.org/go/libvirt"
 )
 
@@ -85,74 +83,88 @@ func (s *domainState) String() string {
 }
 
 func GetDomain(l *libvirt.Domain, d *Domain) {
-	var wg sync.WaitGroup
+	/* 	var wg sync.WaitGroup
 
-	wg.Add(12)
-	//1
-	go func() {
-		defer wg.Done()
-		d.Autostart, _ = l.GetAutostart()
-	}()
-	//2
-	go func() {
-		defer wg.Done()
-		d.Hostname, _ = l.GetHostname(libvirt.DOMAIN_GET_HOSTNAME_AGENT | libvirt.DOMAIN_GET_HOSTNAME_LEASE)
-	}()
-	//3
-	go func() {
-		defer wg.Done()
-		d.ID, _ = l.GetID()
-	}()
-	//4
-	go func() {
-		defer wg.Done()
-		d.MaxMemory, _ = l.GetMaxMemory()
-	}()
-	//5
-	go func() {
-		defer wg.Done()
-		d.MaxVcpus, _ = l.GetMaxVcpus()
-	}()
-	//6
-	go func() {
-		defer wg.Done()
-		d.Messages, _ = l.GetMessages(libvirt.DOMAIN_MESSAGE_DEPRECATION | libvirt.DOMAIN_MESSAGE_TAINTING)
-	}()
-	//7
-	go func() {
-		defer wg.Done()
-		d.Name, _ = l.GetName()
-	}()
-	//8
-	go func() {
-		defer wg.Done()
-		d.OSType, _ = l.GetOSType()
-	}()
-	//9
-	go func() {
-		defer wg.Done()
-		d.UUID, _ = l.GetUUIDString()
-	}()
-	//10
-	go func() {
-		defer wg.Done()
-		s, r, _ := l.GetState()
-		d.State = domainState{State: int(s)}
-		d.State.StateStr = d.State.String()
-		d.StateReason = r
-	}()
-	//11
-	go func() {
-		defer wg.Done()
-		getVcpuInfo(l, d)
-	}()
-	//12
-	go func() {
-		defer wg.Done()
-		getDomainInfo(l, d)
-	}()
+	   	wg.Add(12)
+	   	//1
+	   	go func() {
+	   		defer wg.Done()
+	   		d.Autostart, _ = l.GetAutostart()
+	   	}()
+	   	//2
+	   	go func() {
+	   		defer wg.Done()
+	   		d.Hostname, _ = l.GetHostname(libvirt.DOMAIN_GET_HOSTNAME_AGENT | libvirt.DOMAIN_GET_HOSTNAME_LEASE)
+	   	}()
+	   	//3
+	   	go func() {
+	   		defer wg.Done()
+	   		d.ID, _ = l.GetID()
+	   	}()
+	   	//4
+	   	go func() {
+	   		defer wg.Done()
+	   		d.MaxMemory, _ = l.GetMaxMemory()
+	   	}()
+	   	//5
+	   	go func() {
+	   		defer wg.Done()
+	   		d.MaxVcpus, _ = l.GetMaxVcpus()
+	   	}()
+	   	//6
+	   	go func() {
+	   		defer wg.Done()
+	   		d.Messages, _ = l.GetMessages(libvirt.DOMAIN_MESSAGE_DEPRECATION | libvirt.DOMAIN_MESSAGE_TAINTING)
+	   	}()
+	   	//7
+	   	go func() {
+	   		defer wg.Done()
+	   		d.Name, _ = l.GetName()
+	   	}()
+	   	//8
+	   	go func() {
+	   		defer wg.Done()
+	   		d.OSType, _ = l.GetOSType()
+	   	}()
+	   	//9
+	   	go func() {
+	   		defer wg.Done()
+	   		d.UUID, _ = l.GetUUIDString()
+	   	}()
+	   	//10
+	   	go func() {
+	   		defer wg.Done()
+	   		s, r, _ := l.GetState()
+	   		d.State = domainState{State: int(s), StateStr: d.State.String()}
+	   		d.StateReason = r
+	   	}()
+	   	//11
+	   	go func() {
+	   		defer wg.Done()
+	   		getVcpuInfo(l, d)
+	   	}()
+	   	//12
+	   	go func() {
+	   		defer wg.Done()
+	   		getDomainInfo(l, d)
+	   	}()
 
-	wg.Wait()
+	   	wg.Wait() */
+
+	d.Autostart, _ = l.GetAutostart()
+	d.Hostname, _ = l.GetHostname(libvirt.DOMAIN_GET_HOSTNAME_AGENT | libvirt.DOMAIN_GET_HOSTNAME_LEASE)
+	d.ID, _ = l.GetID()
+	d.MaxMemory, _ = l.GetMaxMemory()
+	d.MaxVcpus, _ = l.GetMaxVcpus()
+	d.Messages, _ = l.GetMessages(libvirt.DOMAIN_MESSAGE_DEPRECATION | libvirt.DOMAIN_MESSAGE_TAINTING)
+	d.Name, _ = l.GetName()
+	d.OSType, _ = l.GetOSType()
+	d.UUID, _ = l.GetUUIDString()
+	s, r, _ := l.GetState()
+	d.State = domainState{State: int(s), StateStr: d.State.String()}
+	d.StateReason = r
+	getVcpuInfo(l, d)
+	getDomainInfo(l, d)
 }
 
 type domainVcpuInfo struct {

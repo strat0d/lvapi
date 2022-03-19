@@ -49,32 +49,54 @@ type DomainsResult struct {
 	Error   error
 }
 
-func Domains(h string) DomainsResult {
-	lvconn, err := lvapiConn(h, false)
-	if err != nil {
-		return DomainsResult{Domains: nil, Error: err}
-	}
-	defer lvconn.Close()
+func Domains(lvconn *libvirt.Connect) DomainsResult {
+	//lvconn, err := lvapiConn(h, false)
+	//if err != nil {
+	//	return DomainsResult{Domains: nil, Error: err}
+	//}
+	// defer lvconn.Close()
 
 	domains, err := lvconn.ListAllDomains(libvirt.CONNECT_LIST_DOMAINS_ACTIVE | libvirt.CONNECT_LIST_DOMAINS_INACTIVE)
 	if err != nil {
 		return DomainsResult{Domains: nil, Error: err}
 	}
+	if len(domains) == 0 {
+		return DomainsResult{Domains: nil, Error: err}
+	}
+
+	// doms := make([]lvstr.Domain, 0, len(domains))
+	// first_dom := domains[0]
+	// d := lvstr.Domain{}
+	// lvstr.GetDomain(&first_dom, &d)
+	// doms = append(doms, d)
+
+	// domains = append(domains[:0], domains[1:]...)
+
+	var (
+		mu   = &sync.Mutex{}
+		doms = make([]lvstr.Domain, 0)
+	)
 
 	var wg sync.WaitGroup
-
-	doms := []lvstr.Domain{}
-	wg.Add(len(domains))
+	//wg.Add(len(domains))
 	for _, dom := range domains {
-		d := lvstr.Domain{}
+		wg.Add(1)
 		go func(domGr libvirt.Domain) {
 			defer wg.Done()
+			d := lvstr.Domain{}
 			lvstr.GetDomain(&domGr, &d)
+			mu.Lock()
 			doms = append(doms, d)
+			mu.Unlock()
 		}(dom)
 	}
 	wg.Wait()
-
+	/* 	for _, dom := range domains {
+	   		d := lvstr.Domain{}
+	   		lvstr.GetDomain(&dom, &d)
+	   		doms = append(doms, d)
+	   	}
+	*/
 	//always return domaisn in alphabetical order by Name
 	sort.Slice(doms, func(i, j int) bool {
 		return doms[i].Name < doms[j].Name
@@ -116,13 +138,7 @@ func lvDomainByUUID(c *libvirt.Connect, uuid string) (*libvirt.Domain, error) {
 	return d, nil
 }
 
-func LvDomain(h, by, v string, w bool) LvDomainResult {
-	lvconn, err := lvapiConn(h, w)
-	if err != nil {
-		return LvDomainResult{nil, err}
-	}
-
-	defer lvconn.Close()
+func LvDomain(lvconn *libvirt.Connect, by, v string) LvDomainResult {
 	switch by {
 	case "id":
 		id, err := strconv.ParseUint(v, 10, 32)
@@ -151,8 +167,8 @@ func LvDomain(h, by, v string, w bool) LvDomainResult {
 	return LvDomainResult{nil, errors.New("invalid method")}
 }
 
-func Domain(h, by, v string) DomainResult {
-	ld := LvDomain(h, by, v, false)
+func Domain(lvconn *libvirt.Connect, by, v string) DomainResult {
+	ld := LvDomain(lvconn, by, v)
 	if ld.Error != nil {
 		return DomainResult{Error: ld.Error}
 	}
